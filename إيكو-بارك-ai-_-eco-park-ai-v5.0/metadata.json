@@ -1,0 +1,6 @@
+{
+  "name": "إيكو-بارك AI | Eco-Park AI v5.0",
+  "description": "منصة إدارة المواقف الذكية والمستدامة بالذكاء الاصطناعي وتقليل الانبعاثات الكربونية (ESG Scope 3 & V2G & BESS)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

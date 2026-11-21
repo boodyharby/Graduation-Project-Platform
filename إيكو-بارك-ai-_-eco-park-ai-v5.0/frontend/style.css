@@ -1,0 +1,40 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #08121d;
+  color: #f1f5f9;
+}
+
+.container {
+  max-width: 760px;
+  margin: 3rem auto;
+  padding: 0 1.25rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.card {
+  background: #0d1e2e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+
+.controls {
+  display: grid;
+  gap: 0.9rem;
+}
+
+button {
+  background: #ef4444;
+  color: #fff;
+  border: 0;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}

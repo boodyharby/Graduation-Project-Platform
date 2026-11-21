@@ -1,0 +1,472 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'bdalrhmnhrby703@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'role', 'status', 'preferredLang', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'name', 'email', 'role', 'status', 'preferredLang', 'updatedAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.email is string && data.email.size() <= 160
+        && data.role in ['Super Admin', 'Parking Manager', 'Operator', 'Driver', 'Security', 'Maintenance & Energy', 'Finance', 'Sustainability', 'Guest']
+        && data.status in ['active', 'pending', 'rejected']
+        && data.preferredLang in ['ar', 'en']
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidReservation(data) {
+      return data.keys().hasAll([
+        'id', 'ticketCode', 'branch', 'spotId', 'spotLabel', 'driverName',
+        'plateNumber', 'vehicleType', 'entryTime', 'exitTime', 'feeSar',
+        'carbonTaxSar', 'pointsEarned', 'co2SavedKg', 'exhaustPpm', 'status',
+        'createdAt', 'userId', 'createdAtServer'
+      ])
+        && data.keys().hasOnly([
+          'id', 'ticketCode', 'branch', 'spotId', 'spotLabel', 'driverName',
+          'plateNumber', 'vehicleType', 'entryTime', 'exitTime', 'feeSar',
+          'carbonTaxSar', 'pointsEarned', 'co2SavedKg', 'exhaustPpm', 'status',
+          'checkedInAt', 'createdAt', 'userId', 'createdAtServer'
+        ])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 128
+        && data.ticketCode is string && data.ticketCode.size() >= 3 && data.ticketCode.size() <= 32
+        && data.branch is string && data.branch.size() >= 2 && data.branch.size() <= 120
+        && data.spotId is string && data.spotId.size() >= 2 && data.spotId.size() <= 20
+        && data.spotLabel is string && data.spotLabel.size() >= 2 && data.spotLabel.size() <= 20
+        && data.driverName is string && data.driverName.size() >= 1 && data.driverName.size() <= 100
+        && data.plateNumber is string && data.plateNumber.size() >= 2 && data.plateNumber.size() <= 32
+        && data.vehicleType in ['ELECTRIC', 'HYBRID', 'GASOLINE', 'DIESEL']
+        && data.entryTime is string && data.entryTime.size() <= 40
+        && data.exitTime is string && data.exitTime.size() <= 40
+        && data.feeSar is number && data.feeSar >= 0
+        && data.carbonTaxSar is number && data.carbonTaxSar >= 0
+        && data.pointsEarned is number && data.pointsEarned >= 0
+        && data.co2SavedKg is number && data.co2SavedKg >= 0
+        && data.exhaustPpm is number && data.exhaustPpm >= 0
+        && data.status in ['active', 'arrived', 'completed', 'cancelled']
+        && (!('checkedInAt' in data.keys()) || (data.checkedInAt is string && data.checkedInAt.size() <= 40))
+        && data.createdAt is string && data.createdAt.size() <= 40
+        && data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128
+        && data.userId == request.auth.uid
+        && data.createdAtServer is timestamp;
+    }
+
+    function isValidCarbonTransaction(data) {
+      return data.keys().hasAll(['id', 'userId', 'date', 'descriptionAr', 'descriptionEn', 'points', 'co2Kg', 'type', 'createdAtServer'])
+        && data.keys().hasOnly(['id', 'userId', 'date', 'descriptionAr', 'descriptionEn', 'points', 'co2Kg', 'type', 'createdAtServer'])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.date is string && data.date.size() <= 40
+        && data.descriptionAr is string && data.descriptionAr.size() <= 200
+        && data.descriptionEn is string && data.descriptionEn.size() <= 200
+        && data.points is number && data.points >= 0
+        && data.co2Kg is number && data.co2Kg >= 0
+        && data.type in ['visit', 'v2g', 'tax_offset', 'bonus']
+        && data.createdAtServer is timestamp;
+    }
+
+    function isValidV2GSession(data) {
+      return data.keys().hasAll(['id', 'userId', 'vehiclePlate', 'vehicleModel', 'mode', 'energyKwh', 'powerKw', 'startedAt', 'createdAtServer'])
+        && data.keys().hasOnly(['id', 'userId', 'vehiclePlate', 'vehicleModel', 'mode', 'energyKwh', 'powerKw', 'startedAt', 'createdAtServer'])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.vehiclePlate is string && data.vehiclePlate.size() <= 32
+        && data.vehicleModel is string && data.vehicleModel.size() <= 80
+        && data.mode in ['charging', 'discharging', 'paused']
+        && data.energyKwh is number && data.energyKwh >= 0
+        && data.powerKw is number && data.powerKw >= 0
+        && data.startedAt is string && data.startedAt.size() <= 40
+        && data.createdAtServer is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'userId', 'timestamp', 'actor', 'role', 'actionAr', 'actionEn', 'createdAtServer'])
+        && data.keys().hasOnly(['id', 'userId', 'timestamp', 'actor', 'role', 'actionAr', 'actionEn', 'createdAtServer'])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.timestamp is string && data.timestamp.size() <= 40
+        && data.actor is string && data.actor.size() <= 100
+        && data.role is string && data.role.size() <= 40
+        && data.actionAr is string && data.actionAr.size() <= 240
+        && data.actionEn is string && data.actionEn.size() <= 240
+        && data.createdAtServer is timestamp;
+    }
+
+    function isValidSystemEnergyState(data) {
+      return data.keys().hasAll(['userId', 'bessCharge', 'ecoConservation', 'solarKw', 'smokeAlert', 'updatedAt'])
+        && data.keys().hasOnly(['userId', 'bessCharge', 'ecoConservation', 'solarKw', 'smokeAlert', 'updatedAt'])
+        && data.userId is string && data.userId == request.auth.uid
+        && data.bessCharge is number && data.bessCharge >= 0 && data.bessCharge <= 100
+        && data.ecoConservation is bool
+        && data.solarKw is number && data.solarKw >= 0
+        && data.smokeAlert is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSupervisorAlert(data) {
+      return data.keys().hasAll([
+        'id', 'userId', 'alertType', 'status', 'bessCharge', 'smokeAlert',
+        'startedAtMs', 'thresholdMinutes', 'emailDispatched', 'recipients',
+        'summaryAr', 'summaryEn', 'updatedAt'
+      ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'alertType', 'status', 'bessCharge', 'smokeAlert',
+          'startedAtMs', 'thresholdMinutes', 'emailDispatched', 'recipients',
+          'summaryAr', 'summaryEn', 'updatedAt'
+        ])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 && data.userId == request.auth.uid
+        && data.alertType in ['SMOKE_RADAR', 'BESS_UNDER_10']
+        && data.status in ['monitoring', 'escalated', 'resolved']
+        && data.bessCharge is number && data.bessCharge >= 0 && data.bessCharge <= 100
+        && data.smokeAlert is bool
+        && data.startedAtMs is number && data.startedAtMs >= 0
+        && data.thresholdMinutes is number && data.thresholdMinutes >= 1 && data.thresholdMinutes <= 60
+        && data.emailDispatched is bool
+        && data.recipients is list && data.recipients.size() <= 10 && (data.recipients.size() == 0 || data.recipients[0] is string)
+        && data.summaryAr is string && data.summaryAr.size() <= 280
+        && data.summaryEn is string && data.summaryEn.size() <= 280
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidFcmToken(data) {
+      return data.keys().hasAll(['userId', 'token', 'platform', 'permission', 'userAgent', 'updatedAt'])
+        && data.keys().hasOnly(['userId', 'token', 'platform', 'permission', 'userAgent', 'updatedAt'])
+        && data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 && data.userId == request.auth.uid
+        && data.token is string && data.token.size() >= 10 && data.token.size() <= 512
+        && data.platform == 'web'
+        && data.permission in ['granted', 'default', 'denied']
+        && data.userAgent is string && data.userAgent.size() <= 240
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidChargerEfficiencyRating(data) {
+      return data.keys().hasAll([
+        'id', 'userId', 'bayId', 'bayLabel', 'rating', 'note', 'ratedAt', 'ratedBy', 'createdAtServer'
+      ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'bayId', 'bayLabel', 'rating', 'note', 'ratedAt', 'ratedBy', 'createdAtServer'
+        ])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 128
+        && data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 && data.userId == request.auth.uid
+        && data.bayId is string && data.bayId.size() >= 2 && data.bayId.size() <= 20
+        && data.bayLabel is string && data.bayLabel.size() >= 2 && data.bayLabel.size() <= 20
+        && data.rating is number && data.rating >= 1 && data.rating <= 5
+        && data.note is string && data.note.size() <= 240
+        && data.ratedAt is string && data.ratedAt.size() <= 40
+        && data.ratedBy is string && data.ratedBy.size() <= 100
+        && data.createdAtServer is timestamp;
+    }
+
+    function isValidRobotChargingLog(data) {
+      return data.keys().hasAll([
+        'id', 'userId', 'robotId', 'robotName', 'bayId', 'bayLabel',
+        'vehiclePlate', 'energyDeliveredKwh', 'energyConsumedKwh', 'efficiencyPct',
+        'powerKw', 'durationMinutes', 'startedAt', 'completedAt',
+        'supervisorVerified', 'createdAtServer'
+      ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'robotId', 'robotName', 'bayId', 'bayLabel',
+          'vehiclePlate', 'energyDeliveredKwh', 'energyConsumedKwh', 'efficiencyPct',
+          'powerKw', 'durationMinutes', 'startedAt', 'completedAt',
+          'supervisorVerified', 'createdAtServer'
+        ])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 128
+        && data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 && data.userId == request.auth.uid
+        && data.robotId is string && data.robotId.size() >= 1 && data.robotId.size() <= 64
+        && data.robotName is string && data.robotName.size() >= 1 && data.robotName.size() <= 80
+        && data.bayId is string && data.bayId.size() >= 2 && data.bayId.size() <= 20
+        && data.bayLabel is string && data.bayLabel.size() >= 2 && data.bayLabel.size() <= 20
+        && data.vehiclePlate is string && data.vehiclePlate.size() >= 1 && data.vehiclePlate.size() <= 32
+        && data.energyDeliveredKwh is number && data.energyDeliveredKwh >= 0 && data.energyDeliveredKwh <= 1000
+        && data.energyConsumedKwh is number && data.energyConsumedKwh >= 0 && data.energyConsumedKwh <= 1200
+        && data.efficiencyPct is number && data.efficiencyPct >= 0 && data.efficiencyPct <= 100
+        && data.powerKw is number && data.powerKw >= 0 && data.powerKw <= 500
+        && data.durationMinutes is number && data.durationMinutes >= 0 && data.durationMinutes <= 1440
+        && data.startedAt is string && data.startedAt.size() <= 40
+        && data.completedAt is string && data.completedAt.size() <= 40
+        && data.supervisorVerified is bool
+        && data.createdAtServer is timestamp;
+    }
+
+    function isValidShiftHandover(data) {
+      return data.keys().hasAll([
+        'id', 'userId', 'outgoingSupervisor', 'outgoingRole', 'incomingSupervisor',
+        'incomingRole', 'bessChargePct', 'solarKw', 'openWorkOrdersCount',
+        'occupiedBaysCount', 'robotKwhDelivered', 'checklistBessVerified',
+        'checklistAnprClean', 'checklistExitsClear', 'handoverNotes',
+        'signedAt', 'createdAtServer'
+      ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'outgoingSupervisor', 'outgoingRole', 'incomingSupervisor',
+          'incomingRole', 'bessChargePct', 'solarKw', 'openWorkOrdersCount',
+          'occupiedBaysCount', 'robotKwhDelivered', 'checklistBessVerified',
+          'checklistAnprClean', 'checklistExitsClear', 'handoverNotes',
+          'signedAt', 'createdAtServer'
+        ])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 128
+        && data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 && data.userId == request.auth.uid
+        && data.outgoingSupervisor is string && data.outgoingSupervisor.size() >= 1 && data.outgoingSupervisor.size() <= 100
+        && data.outgoingRole is string && data.outgoingRole.size() <= 40
+        && data.incomingSupervisor is string && data.incomingSupervisor.size() >= 1 && data.incomingSupervisor.size() <= 100
+        && data.incomingRole is string && data.incomingRole.size() <= 40
+        && data.bessChargePct is number && data.bessChargePct >= 0 && data.bessChargePct <= 100
+        && data.solarKw is number && data.solarKw >= 0 && data.solarKw <= 1000
+        && data.openWorkOrdersCount is number && data.openWorkOrdersCount >= 0
+        && data.occupiedBaysCount is number && data.occupiedBaysCount >= 0
+        && data.robotKwhDelivered is number && data.robotKwhDelivered >= 0
+        && data.checklistBessVerified is bool
+        && data.checklistAnprClean is bool
+        && data.checklistExitsClear is bool
+        && data.handoverNotes is string && data.handoverNotes.size() <= 400
+        && data.signedAt is string && data.signedAt.size() <= 40
+        && data.createdAtServer is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && isAdmin();
+      allow create: if isValidId(userId)
+        && isSignedIn()
+        && isValidUserProfile(incoming())
+        && incoming().uid == userId
+        && incoming().updatedAt == request.time
+        && (
+          (isAdmin() && (incoming().role != 'Super Admin' || incoming().email == 'bdalrhmnhrby703@gmail.com')) ||
+          (
+            request.auth.uid == userId &&
+            incoming().role != 'Super Admin' &&
+            (
+              (incoming().role in ['Driver', 'Guest'] && incoming().status == 'active') ||
+              (!(incoming().role in ['Driver', 'Guest']) && incoming().status == 'pending')
+            )
+          )
+        );
+      allow update: if isValidId(userId)
+        && isSignedIn()
+        && isValidUserProfile(incoming())
+        && incoming().updatedAt == request.time
+        && incoming().uid == existing().uid
+        && (incoming().role != 'Super Admin' || (existing().email == 'bdalrhmnhrby703@gmail.com' && incoming().email == 'bdalrhmnhrby703@gmail.com'))
+        && (
+          isAdmin() ||
+          (
+            request.auth.uid == userId &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'preferredLang', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(userId) && isAdmin() && existing().email != 'bdalrhmnhrby703@gmail.com';
+    }
+
+    match /reservations/{reservationId} {
+      allow get: if isValidId(reservationId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(reservationId)
+        && isSignedIn()
+        && isValidReservation(incoming())
+        && incoming().createdAtServer == request.time
+        && incoming().status == 'active';
+      allow update: if isValidId(reservationId)
+        && isSignedIn()
+        && isValidReservation(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAtServer == existing().createdAtServer
+        && existing().status != 'completed'
+        && (
+          isAdmin() ||
+          (
+            existing().userId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'checkedInAt'])
+          )
+        );
+      allow delete: if isValidId(reservationId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /carbonTransactions/{txId} {
+      allow get: if isValidId(txId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(txId)
+        && isSignedIn()
+        && isValidCarbonTransaction(incoming())
+        && incoming().createdAtServer == request.time;
+      allow update: if false;
+      allow delete: if isValidId(txId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /v2gSessions/{sessionId} {
+      allow get: if isValidId(sessionId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(sessionId)
+        && isSignedIn()
+        && isValidV2GSession(incoming())
+        && incoming().createdAtServer == request.time;
+      allow update: if isValidId(sessionId)
+        && isSignedIn()
+        && isValidV2GSession(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAtServer == existing().createdAtServer
+        && (
+          isAdmin() ||
+          (
+            existing().userId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['mode', 'energyKwh'])
+          )
+        );
+      allow delete: if isValidId(sessionId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /auditLogs/{logId} {
+      allow get: if isValidId(logId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(logId)
+        && isSignedIn()
+        && isValidAuditLog(incoming())
+        && incoming().createdAtServer == request.time;
+      allow update: if false;
+      allow delete: if isValidId(logId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /systemState/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && isAdmin();
+      allow create: if isValidId(userId)
+        && isSignedIn()
+        && request.auth.uid == userId
+        && isValidSystemEnergyState(incoming())
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isSignedIn()
+        && isValidSystemEnergyState(incoming())
+        && incoming().userId == existing().userId
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            request.auth.uid == userId &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['bessCharge', 'ecoConservation', 'solarKw', 'smokeAlert', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /supervisorAlerts/{alertId} {
+      allow get: if isValidId(alertId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(alertId)
+        && isSignedIn()
+        && isValidSupervisorAlert(incoming())
+        && incoming().id == alertId
+        && incoming().updatedAt == request.time
+        && (isAdmin() || (incoming().emailDispatched == false && incoming().status == 'monitoring'));
+      allow update: if isValidId(alertId)
+        && isSignedIn()
+        && isValidSupervisorAlert(incoming())
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().alertType == existing().alertType
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            existing().status != 'resolved' &&
+            existing().userId == request.auth.uid &&
+            incoming().startedAtMs == existing().startedAtMs &&
+            incoming().emailDispatched == existing().emailDispatched &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'bessCharge', 'smokeAlert', 'summaryAr', 'summaryEn', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(alertId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /fcmTokens/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && isAdmin();
+      allow create: if isValidId(userId)
+        && isSignedIn()
+        && request.auth.uid == userId
+        && isValidFcmToken(incoming())
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isSignedIn()
+        && request.auth.uid == userId
+        && isValidFcmToken(incoming())
+        && incoming().userId == existing().userId
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['token', 'permission', 'userAgent', 'updatedAt']);
+      allow delete: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /chargerMaintenanceRatings/{ratingId} {
+      allow get: if isValidId(ratingId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(ratingId)
+        && isSignedIn()
+        && isValidChargerEfficiencyRating(incoming())
+        && incoming().id == ratingId
+        && incoming().createdAtServer == request.time;
+      allow update: if false;
+      allow delete: if isValidId(ratingId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /robotChargingLogs/{logId} {
+      allow get: if isValidId(logId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(logId)
+        && isSignedIn()
+        && isValidRobotChargingLog(incoming())
+        && incoming().id == logId
+        && incoming().createdAtServer == request.time;
+      allow update: if isValidId(logId)
+        && isSignedIn()
+        && isValidRobotChargingLog(incoming())
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAtServer == existing().createdAtServer
+        && (
+          isAdmin() ||
+          (
+            existing().userId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['supervisorVerified'])
+          )
+        );
+      allow delete: if isValidId(logId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /shiftHandovers/{handoverId} {
+      allow get: if isValidId(handoverId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(handoverId)
+        && isSignedIn()
+        && isValidShiftHandover(incoming())
+        && incoming().id == handoverId
+        && incoming().createdAtServer == request.time;
+      allow update: if false;
+      allow delete: if isValidId(handoverId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+  }
+}

@@ -1,0 +1,343 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile and preferred interface settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "role": {
+          "type": "string",
+          "enum": [
+            "Super Admin",
+            "Parking Manager",
+            "Operator",
+            "Driver",
+            "Security",
+            "Maintenance & Energy",
+            "Finance",
+            "Sustainability",
+            "Guest"
+          ]
+        },
+        "status": { "type": "string", "enum": ["active", "pending", "rejected"] },
+        "preferredLang": { "type": "string", "enum": ["ar", "en"] },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "role", "status", "preferredLang", "updatedAt"]
+    },
+    "Reservation": {
+      "title": "Reservation",
+      "description": "Smart parking reservation and Green QR Pass",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ticketCode": { "type": "string", "minLength": 3, "maxLength": 32 },
+        "branch": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "spotId": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "spotLabel": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "driverName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "plateNumber": { "type": "string", "minLength": 2, "maxLength": 32 },
+        "vehicleType": {
+          "type": "string",
+          "enum": ["ELECTRIC", "HYBRID", "GASOLINE", "DIESEL"]
+        },
+        "entryTime": { "type": "string", "maxLength": 40 },
+        "exitTime": { "type": "string", "maxLength": 40 },
+        "feeSar": { "type": "number" },
+        "carbonTaxSar": { "type": "number" },
+        "pointsEarned": { "type": "number" },
+        "co2SavedKg": { "type": "number" },
+        "exhaustPpm": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "arrived", "completed", "cancelled"] },
+        "checkedInAt": { "type": "string", "maxLength": 40 },
+        "createdAt": { "type": "string", "maxLength": 40 },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAtServer": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "ticketCode",
+        "branch",
+        "spotId",
+        "spotLabel",
+        "driverName",
+        "plateNumber",
+        "vehicleType",
+        "entryTime",
+        "exitTime",
+        "feeSar",
+        "carbonTaxSar",
+        "pointsEarned",
+        "co2SavedKg",
+        "exhaustPpm",
+        "status",
+        "createdAt",
+        "userId",
+        "createdAtServer"
+      ]
+    },
+    "CarbonTransaction": {
+      "title": "CarbonTransaction",
+      "description": "User carbon points and CO2 reduction ledger entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 40 },
+        "descriptionAr": { "type": "string", "maxLength": 200 },
+        "descriptionEn": { "type": "string", "maxLength": 200 },
+        "points": { "type": "number" },
+        "co2Kg": { "type": "number" },
+        "type": { "type": "string", "enum": ["visit", "v2g", "tax_offset", "bonus"] },
+        "createdAtServer": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "date", "descriptionAr", "descriptionEn", "points", "co2Kg", "type", "createdAtServer"]
+    },
+    "V2GSession": {
+      "title": "V2GSession",
+      "description": "Bidirectional Vehicle-to-Grid energy exchange session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "vehiclePlate": { "type": "string", "maxLength": 32 },
+        "vehicleModel": { "type": "string", "maxLength": 80 },
+        "mode": { "type": "string", "enum": ["charging", "discharging", "paused"] },
+        "energyKwh": { "type": "number" },
+        "powerKw": { "type": "number" },
+        "startedAt": { "type": "string", "maxLength": 40 },
+        "createdAtServer": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "vehiclePlate", "vehicleModel", "mode", "energyKwh", "powerKw", "startedAt", "createdAtServer"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Security and operational audit log record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "timestamp": { "type": "string", "maxLength": 40 },
+        "actor": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "maxLength": 40 },
+        "actionAr": { "type": "string", "maxLength": 240 },
+        "actionEn": { "type": "string", "maxLength": 240 },
+        "createdAtServer": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "timestamp", "actor", "role", "actionAr", "actionEn", "createdAtServer"]
+    },
+    "SystemEnergyState": {
+      "title": "SystemEnergyState",
+      "description": "BESS charge, solar kW, Eco-Conservation and safety sentry state",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "bessCharge": { "type": "number" },
+        "ecoConservation": { "type": "boolean" },
+        "solarKw": { "type": "number" },
+        "smokeAlert": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "bessCharge", "ecoConservation", "solarKw", "smokeAlert", "updatedAt"]
+    },
+    "SupervisorAlert": {
+      "title": "SupervisorAlert",
+      "description": "Persistent safety radar or BESS < 10% escalation alert tracked by Cloud Functions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "alertType": { "type": "string", "enum": ["SMOKE_RADAR", "BESS_UNDER_10"] },
+        "status": { "type": "string", "enum": ["monitoring", "escalated", "resolved"] },
+        "bessCharge": { "type": "number" },
+        "smokeAlert": { "type": "boolean" },
+        "startedAtMs": { "type": "number" },
+        "thresholdMinutes": { "type": "number" },
+        "emailDispatched": { "type": "boolean" },
+        "recipients": { "type": "array" },
+        "summaryAr": { "type": "string", "maxLength": 280 },
+        "summaryEn": { "type": "string", "maxLength": 280 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "userId",
+        "alertType",
+        "status",
+        "bessCharge",
+        "smokeAlert",
+        "startedAtMs",
+        "thresholdMinutes",
+        "emailDispatched",
+        "recipients",
+        "summaryAr",
+        "summaryEn",
+        "updatedAt"
+      ]
+    },
+    "FcmDeviceToken": {
+      "title": "FcmDeviceToken",
+      "description": "Driver browser Firebase Cloud Messaging registration token for push notifications",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "token": { "type": "string", "minLength": 10, "maxLength": 512 },
+        "platform": { "type": "string", "enum": ["web"] },
+        "permission": { "type": "string", "enum": ["granted", "default", "denied"] },
+        "userAgent": { "type": "string", "maxLength": 240 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "token", "platform", "permission", "userAgent", "updatedAt"]
+    },
+    "ChargerEfficiencyRating": {
+      "title": "ChargerEfficiencyRating",
+      "description": "Supervisor 1-to-5 star efficiency evaluation stored in EV charger maintenance records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "bayId": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "bayLabel": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "rating": { "type": "number" },
+        "note": { "type": "string", "maxLength": 240 },
+        "ratedAt": { "type": "string", "maxLength": 40 },
+        "ratedBy": { "type": "string", "maxLength": 100 },
+        "createdAtServer": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "bayId", "bayLabel", "rating", "note", "ratedAt", "ratedBy", "createdAtServer"]
+    },
+    "RobotChargingSessionLog": {
+      "title": "RobotChargingSessionLog",
+      "description": "EcoCharge Bot mobile charging session energy delivery & efficiency log per bay",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "robotId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "robotName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "bayId": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "bayLabel": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "vehiclePlate": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "energyDeliveredKwh": { "type": "number" },
+        "energyConsumedKwh": { "type": "number" },
+        "efficiencyPct": { "type": "number" },
+        "powerKw": { "type": "number" },
+        "durationMinutes": { "type": "number" },
+        "startedAt": { "type": "string", "maxLength": 40 },
+        "completedAt": { "type": "string", "maxLength": 40 },
+        "supervisorVerified": { "type": "boolean" },
+        "createdAtServer": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "userId",
+        "robotId",
+        "robotName",
+        "bayId",
+        "bayLabel",
+        "vehiclePlate",
+        "energyDeliveredKwh",
+        "energyConsumedKwh",
+        "efficiencyPct",
+        "powerKw",
+        "durationMinutes",
+        "startedAt",
+        "completedAt",
+        "supervisorVerified",
+        "createdAtServer"
+      ]
+    },
+    "ShiftHandover": {
+      "title": "ShiftHandover",
+      "description": "Multi-role supervisor shift handover log capturing energy, maintenance & gate snapshot",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "outgoingSupervisor": { "type": "string", "maxLength": 100 },
+        "outgoingRole": { "type": "string", "maxLength": 40 },
+        "incomingSupervisor": { "type": "string", "maxLength": 100 },
+        "incomingRole": { "type": "string", "maxLength": 40 },
+        "bessChargePct": { "type": "number" },
+        "solarKw": { "type": "number" },
+        "openWorkOrdersCount": { "type": "number" },
+        "occupiedBaysCount": { "type": "number" },
+        "robotKwhDelivered": { "type": "number" },
+        "checklistBessVerified": { "type": "boolean" },
+        "checklistAnprClean": { "type": "boolean" },
+        "checklistExitsClear": { "type": "boolean" },
+        "handoverNotes": { "type": "string", "maxLength": 400 },
+        "signedAt": { "type": "string", "maxLength": 40 },
+        "createdAtServer": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "userId",
+        "outgoingSupervisor",
+        "outgoingRole",
+        "incomingSupervisor",
+        "incomingRole",
+        "bessChargePct",
+        "solarKw",
+        "openWorkOrdersCount",
+        "occupiedBaysCount",
+        "robotKwhDelivered",
+        "checklistBessVerified",
+        "checklistAnprClean",
+        "checklistExitsClear",
+        "handoverNotes",
+        "signedAt",
+        "createdAtServer"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile document isolated by UID"
+    },
+    "/reservations/{reservationId}": {
+      "schema": { "$ref": "#/entities/Reservation" },
+      "description": "Smart parking reservations owned by the authenticated user"
+    },
+    "/carbonTransactions/{txId}": {
+      "schema": { "$ref": "#/entities/CarbonTransaction" },
+      "description": "Carbon wallet transactions owned by the authenticated user"
+    },
+    "/v2gSessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/V2GSession" },
+      "description": "V2G energy sessions owned by the authenticated user"
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "System audit logs"
+    },
+    "/systemState/{userId}": {
+      "schema": { "$ref": "#/entities/SystemEnergyState" },
+      "description": "Persisted BESS & energy telemetry state per workspace"
+    },
+    "/supervisorAlerts/{alertId}": {
+      "schema": { "$ref": "#/entities/SupervisorAlert" },
+      "description": "Safety radar and BESS < 10% incidents escalated to supervisors after 5 minutes"
+    },
+    "/fcmTokens/{userId}": {
+      "schema": { "$ref": "#/entities/FcmDeviceToken" },
+      "description": "Registered FCM Web Push tokens isolated per user UID"
+    },
+    "/chargerMaintenanceRatings/{ratingId}": {
+      "schema": { "$ref": "#/entities/ChargerEfficiencyRating" },
+      "description": "Supervisor efficiency ratings (1-5 stars) attached to EV charger maintenance logs"
+    },
+    "/robotChargingLogs/{logId}": {
+      "schema": { "$ref": "#/entities/RobotChargingSessionLog" },
+      "description": "EcoCharge Bot mobile charging sessions tracking energy delivered per bay and efficiency"
+    },
+    "/shiftHandovers/{handoverId}": {
+      "schema": { "$ref": "#/entities/ShiftHandover" },
+      "description": "Multi-role supervisor shift handover reports"
+    }
+  }
+}
